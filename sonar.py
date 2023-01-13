@@ -11,14 +11,14 @@
 from    keras.models            import  Sequential,load_model
 from    keras.layers.core       import  Dense
 from    sklearn.preprocessing   import  LabelEncoder
-from    sklearn.model_selection import  train_test_split
+from    sklearn.model_selection import  train_test_split,StratifiedKFold
 
 import  pandas      as  pd
 import  numpy       as  np
 import  tensorflow  as  tf
 
 np.random.seed(0)
-tf.random.set_seed(3)
+tf.random.set_seed(0)
 
 df = pd.read_csv("dataset/sonar.csv",header=None)
 
@@ -30,21 +30,20 @@ e = LabelEncoder()
 e.fit(Y_obj)
 Y = e.transform(Y_obj)
 
-X_train,X_test,Y_train,Y_test = train_test_split(X,Y,test_size=0.3,random_state=0)
+n_fold = 10
+skf = StratifiedKFold(n_splits=n_fold,shuffle=True,random_state=0)
+accuracy = []
 
-model = Sequential()
-model.add(Dense(24,input_dim=60,activation='relu'))
-model.add(Dense(10,activation='relu'))
-model.add(Dense(1,activation='sigmoid'))
+for train,test in skf.split(X,Y):
+    model = Sequential()
+    model.add(Dense(24,input_dim=60,activation='relu'))
+    model.add(Dense(10,activation='relu'))
+    model.add(Dense(1,activation='sigmoid'))
+    model.compile(loss='mean_squared_error',
+                  optimizer='adam',
+                  metrics=['accuracy'])
+    model.fit(X[train],Y[train],epochs=100,batch_size=5)
+    k_accuracy = "%.4f"%(model.evaluate(X[test],Y[test])[1])
+    accuracy.append(k_accuracy)
 
-model.compile(loss='binary_crossentropy',
-              optimizer='adam',
-              metrics=['accuracy'])
-
-model.fit(X_train,Y_train,epochs=200,batch_size=5)
-model.save('train_test_split.model')
-
-del model
-model = load_model('train_test_split.model')
-
-print("\n Accuracy=%.4f"%(model.evaluate(X_test,Y_test)[1]))
+print("\n %.f fold accuracy : "%n_fold,accuracy)
