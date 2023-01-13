@@ -2,12 +2,13 @@ from    keras.models    import  Sequential
 from    keras.layers    import  Dense
 from    keras.callbacks import  ModelCheckpoint,EarlyStopping
 
+import  os
 import  pandas  as pd
 import  numpy   as np
 import  tensorflow          as  tf
 import  matplotlib.pyplot   as  plt
 
-seed_for_random = 0
+seed_for_random = 3
 np.random.seed(seed_for_random)
 tf.random.set_seed(seed_for_random)
 
@@ -27,5 +28,13 @@ model.compile(loss='binary_crossentropy',
               optimizer='adam',
               metrics=['accuracy'])
 
-model.fit(X,Y,epochs=200,batch_size=200)
-print("\n Accuracy: %.4f"%(model.evaluate(X,Y)[1]))
+MODEL_DIR = './model/'
+if not os.path.exists(MODEL_DIR) :
+    os.mkdir(MODEL_DIR)
+
+modelpath = "./model/{epoch:02d}-{val_loss:.4f}.hdf5"
+checkpointer = ModelCheckpoint(filepath=modelpath,monitor='val_loss',
+                               verbose=1,save_best_only=True)
+
+model.fit(X,Y,epochs=200,batch_size=200,
+          validation_split=0.2,verbose=0,callbacks=[checkpointer])
