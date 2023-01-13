@@ -1,4 +1,14 @@
-from    keras.models            import  Sequential
+# if you can see the below error :
+#
+#       ...
+#       model_config = json.loads(model_config.decode('utf-8'))
+#   AttributeError: 'str' object has no attribute 'decode'
+#
+# please apply the below configration to your environment:
+#
+#   > pip install h5py==2.10.0
+
+from    keras.models            import  Sequential,load_model
 from    keras.layers.core       import  Dense
 from    sklearn.preprocessing   import  LabelEncoder
 from    sklearn.model_selection import  train_test_split
@@ -32,4 +42,9 @@ model.compile(loss='binary_crossentropy',
               metrics=['accuracy'])
 
 model.fit(X_train,Y_train,epochs=200,batch_size=5)
+model.save('train_test_split.model')
+
+del model
+model = load_model('train_test_split.model')
+
 print("\n Accuracy=%.4f"%(model.evaluate(X_test,Y_test)[1]))
