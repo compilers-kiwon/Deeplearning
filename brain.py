@@ -5,7 +5,8 @@ import matplotlib.pyplot as plt
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense,Activation,Dropout,Flatten,Dense,Conv2D,MaxPooling2D
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras import optimizers,initializers,regularizers,metrics
+from tensorflow.keras import optimizers,initializers,regularizers,metrics,Input,models,layers
+from tensorflow.keras.applications import VGG16
 
 np.random.seed(3)
 tf.random.set_seed(3)
@@ -17,35 +18,28 @@ train_generator = train_datagen.flow_from_directory(
     './train',target_size=(150,150),batch_size=5,class_mode='binary'
 )
 
-test_datagen = ImageDataGenerator(rescale=1./255)
+test_datagen = ImageDataGenerator(rescale=1./255,horizontal_flip=True,
+                                  width_shift_range=0.1,height_shift_range=0.1,
+                                  fill_mode='nearest')
 test_generator = test_datagen.flow_from_directory(
     './test',target_size=(150,150),batch_size=5,class_mode='binary'
 )
 
-model = Sequential()
-model.add(Conv2D(32,(3,3),input_shape=(150,150,3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2,2)))
+transfer_model = VGG16(weights='imagenet',include_top=False,input_shape=(150,150,3))
+transfer_model.trainable = False
+transfer_model.summary()
 
-model.add(Conv2D(32,(3,3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2,2)))
+finetune_model = models.Sequential()
+finetune_model.add(transfer_model)
+finetune_model.add(Flatten())
+finetune_model.add(Dense(64,activation='relu'))
+finetune_model.add(Dense(2,activation='softmax'))
+finetune_model.summary()
 
-model.add(Conv2D(64,(3,3)))
-model.add(Activation('relu'))
-model.add(MaxPooling2D(pool_size=(2,2)))
-
-model.add(Flatten())
-model.add(Dense(64))
-model.add(Activation('relu'))
-model.add(Dropout(0.5))
-model.add(Dense(2))
-model.add(Activation('softmax'))
-
-model.compile(loss='sparse_categorical_crossentropy',
+finetune_model.compile(loss='sparse_categorical_crossentropy',
     optimizer=optimizers.Adam(learning_rate=0.0002),metrics=['accuracy'])
 
-history = model.fit_generator(train_generator,steps_per_epoch=100,
+history = finetune_model.fit_generator(train_generator,steps_per_epoch=100,
     epochs=20,validation_data=test_generator,validation_steps=4)
 
 acc = history.history['accuracy']
